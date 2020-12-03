@@ -1,31 +1,36 @@
 const express = require('express');
 const morgan = require('morgan');
-const app = express();
-const fs = require('fs');
 const path = require('path');
+const { PORT } = require('./config');
+const fs = require('fs');
+const app = express();
 
-try {
-  fs.accessSync('upload');
-} catch (e) {
-  fs.mkdirSync('upload');
-}
+if (!fs.existsSync('upload')) fs.mkdirSync('upload');
 
-// application middleware
-app.use(express.static(path.join(__dirname, 'upload')));
+// Application Middleware
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// router
-app.use('/users', require('./routes/user.router'));
+// Routes
+app.use('/upload', express.static(path.join(__dirname, 'upload')));
+app.use('/auth', require('./routes/auth.router'));
+app.use('/users', require('./routes/users.router'));
 
-// errorHandling
-// todo: http-errors
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ success: true, message: err.message });
+// Not Found
+app.use('*', (req, res, next) => {
+  res.status(404).json({ success: false, message: 'Not Found' });
 });
 
-app.listen(9000, () => {
-  console.log('start');
+// Error Handling
+app.use((err, req, res, next) => {
+  res.status(500).json({ success: false, error: err.toString() });
+});
+
+// Port Binding
+app.listen(PORT, err => {
+  if (err) {
+    console.error(err);
+    process.exit();
+  } else console.log('start!');
 });
